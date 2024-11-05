@@ -35,8 +35,10 @@ type DataBaseConfigType struct {
 	Password      string `json:"password"`
 	Address       string `json:"address"`
 	ContainerName string `json:"container_name"`
+	DataBaseName  string `json:"db_name"`
 	IsDocker      bool   `json:"is_docker"`
 	Bucket        string `json:"s3_bucket"`
+	TypeDB        string `json:"type_db"`
 }
 
 func (s S3ConfigType) String() string {
