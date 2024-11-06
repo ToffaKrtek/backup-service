@@ -12,8 +12,9 @@ import (
 )
 
 type S3Item struct {
-	FilePath string
-	Bucket   string
+	ObjectName string
+	FilePath   string
+	Bucket     string
 }
 
 var configFileName = "backup-service.config.json"

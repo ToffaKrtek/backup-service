@@ -17,8 +17,9 @@ func Archive(wg *sync.WaitGroup, files chan config.S3Item) {
 		go func(dir config.DirectoryConfigType) {
 			defer wg.Done()
 			files <- config.S3Item{
-				Bucket:   dir.Bucket,
-				FilePath: zipDirectory(dir.Path, dir.Dirname),
+				Bucket:     dir.Bucket,
+				FilePath:   zipDirectory(dir.Path, dir.Dirname),
+				ObjectName: dir.Dirname,
 			}
 		}(dir)
 	}

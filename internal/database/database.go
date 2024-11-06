@@ -52,7 +52,8 @@ func Dump(wg *sync.WaitGroup, files chan config.S3Item) {
 			switch db.TypeDB {
 			case "postgre":
 				files <- config.S3Item{
-					Bucket: db.Bucket,
+					ObjectName: db.DataBaseName,
+					Bucket:     db.Bucket,
 					FilePath: dumpPostgreSQLDocker(
 						db.ContainerName,
 						db.DataBaseName,
@@ -63,7 +64,8 @@ func Dump(wg *sync.WaitGroup, files chan config.S3Item) {
 			case "mysql":
 				if db.IsDocker {
 					files <- config.S3Item{
-						Bucket: db.Bucket,
+						ObjectName: db.DataBaseName,
+						Bucket:     db.Bucket,
 						FilePath: dumpMysqlDocker(
 							db.ContainerName,
 							db.DataBaseName,
@@ -73,7 +75,8 @@ func Dump(wg *sync.WaitGroup, files chan config.S3Item) {
 					}
 				} else {
 					files <- config.S3Item{
-						Bucket: db.Bucket,
+						ObjectName: db.DataBaseName,
+						Bucket:     db.Bucket,
 						FilePath: dumpMysqlHost(
 							db.DataBaseName,
 							db.User,
