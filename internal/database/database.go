@@ -2,12 +2,46 @@ package database
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"sync"
 
 	"github.com/ToffaKrtek/backup-service/internal/config"
 )
+
+type CmdInterface interface {
+	Run() error
+	SetEnv(env []string)
+	SetStdout(stdout io.Writer)
+}
+
+type CmdInner struct {
+	cmd *exec.Cmd
+}
+
+func (e *CmdInner) Run() error {
+	return e.cmd.Run()
+}
+
+func (e *CmdInner) SetEnv(env []string) {
+	e.cmd.Env = env
+}
+
+func (e *CmdInner) SetStdout(stdout io.Writer) {
+	e.cmd.Stdout = stdout
+}
+
+func NewCommand(name string, arg ...string) CmdInterface {
+	if execCommand == nil {
+		return &CmdInner{
+			cmd: exec.Command(name, arg...),
+		}
+	}
+	return execCommand
+}
+
+var execCommand CmdInterface
 
 func Dump(wg *sync.WaitGroup, files chan config.S3Item) {
 	conf := config.Config
@@ -58,7 +92,7 @@ func dumpMysqlDocker(
 	user string,
 	pass string,
 ) string {
-	cmd := exec.Command(
+	cmd := NewCommand(
 		"docker",
 		"exec",
 		containerName,
@@ -74,7 +108,7 @@ func dumpMysqlDocker(
 		return ""
 	}
 	defer outfile.Close()
-	cmd.Stdout = outfile
+	cmd.SetStdout(outfile)
 	if err := cmd.Run(); err != nil {
 		fmt.Println("Ошибка выполнения команды:", err)
 		return ""
@@ -84,7 +118,7 @@ func dumpMysqlDocker(
 
 }
 func dumpMysqlHost(dbName string, user string, pass string) string {
-	cmd := exec.Command(
+	cmd := NewCommand(
 		"mysqldump",
 		"-u"+user,
 		"-p"+pass,
@@ -99,7 +133,7 @@ func dumpMysqlHost(dbName string, user string, pass string) string {
 	}
 	defer outfile.Close()
 
-	cmd.Stdout = outfile
+	cmd.SetStdout(outfile)
 	if err := cmd.Run(); err != nil {
 		fmt.Println("Ошибка выполнения команды:", err)
 		return ""
@@ -113,7 +147,7 @@ func dumpPostgreSQLDocker(
 	user string,
 	pass string,
 ) string {
-	cmd := exec.Command(
+	cmd := NewCommand(
 		"docker",
 		"exec",
 		containerName,
@@ -130,8 +164,8 @@ func dumpPostgreSQLDocker(
 	}
 	defer outfile.Close()
 
-	cmd.Stdout = outfile
-	cmd.Env = append(os.Environ(), "PGPASSWORD="+pass)
+	cmd.SetStdout(outfile)
+	cmd.SetEnv(append(os.Environ(), "PGPASSWORD="+pass))
 	if err := cmd.Run(); err != nil {
 		fmt.Println("Ошибка выполнения команды:", err)
 		return ""
