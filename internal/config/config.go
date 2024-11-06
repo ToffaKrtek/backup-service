@@ -6,8 +6,15 @@ import (
 	"io/ioutil"
 	"log"
 	"net"
+	"os"
+	"path/filepath"
 	"time"
 )
+
+type S3Item struct {
+	FilePath string
+	Bucket   string
+}
 
 var configFileName = "backup-service.config.json"
 
@@ -26,8 +33,9 @@ type S3ConfigType struct {
 }
 
 type DirectoryConfigType struct {
-	Path   string `json:"path"`
-	Bucket string `json:"s3_bucket"`
+	Path    string `json:"path"`
+	Dirname string `json:"dirname"`
+	Bucket  string `json:"s3_bucket"`
 }
 
 type DataBaseConfigType struct {
@@ -96,4 +104,10 @@ func HandleConnection(conn net.Conn) {
 	Config = newConfig
 	SaveConfig()
 	log.Println("Конфигурация обновлена:", *Config)
+}
+
+func GetFileName(template string) string {
+	tempDir := os.TempDir()
+	timestamp := time.Now().Format("20060102_150405")
+	return filepath.Join(tempDir, fmt.Sprintf(template, timestamp))
 }
