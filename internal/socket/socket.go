@@ -33,3 +33,5 @@ func SocketStart(connFuncs ...ConnFunc) {
 		}(conn)
 	}
 }
+
+func TriggerSockt() {}
