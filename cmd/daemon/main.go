@@ -23,6 +23,7 @@ func main() {
 	go socket.SocketStart(config.UpdateConfigHandler, rerunJobQueueHandler)
 
 	scheduleJob()
+	select {}
 }
 
 func scheduleJob() {
