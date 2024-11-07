@@ -73,6 +73,36 @@ func (c ConfigType) GetStartTime() time.Time {
 var Config *ConfigType
 
 func LoadConfig() {
+	if _, err := os.Stat(configFileName); os.IsNotExist(err) {
+		log.Println("Файл конфигурации не найден. Создание дефолтной конфигурации.")
+		defaultConfig := ConfigType{
+			StartTime:   time.Now().Add(24 * time.Hour),
+			ServerName:  "default_server",
+			Directories: []DirectoryConfigType{},
+			DataBases:   []DataBaseConfigType{},
+			S3: S3ConfigType{
+				Endpoint:        "default_endpoint",
+				AccessKeyID:     "default_access_key",
+				SecretAccessKey: "default_secret_key",
+			},
+		}
+
+		data, err := json.MarshalIndent(defaultConfig, "", "  ")
+		if err != nil {
+			log.Println("Ошибка сериализации дефолтной конфигурации:", err)
+			return
+		}
+
+		if err := os.WriteFile(configFileName, data, 0644); err != nil {
+			log.Println("Ошибка записи дефолтной конфигурации:", err)
+			return
+		}
+
+		Config = &defaultConfig
+		log.Println("Дефолтная конфигурация создана:", Config)
+		return
+	}
+
 	data, err := os.ReadFile(configFileName)
 	if err != nil {
 		log.Println("Ошибка чтения конфигурации:", err)
@@ -93,7 +123,7 @@ func SaveConfig() {
 	}
 }
 
-func HandleConnection(conn net.Conn) {
+func UpdateConfigHandler(conn net.Conn) {
 	defer conn.Close()
 
 	var newConfig *ConfigType

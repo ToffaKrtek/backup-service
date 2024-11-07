@@ -7,6 +7,14 @@ import (
 	"time"
 )
 
+var mockConfig = &ConfigType{
+	StartTime:   time.Now(),
+	ServerName:  "TestServer",
+	Directories: []DirectoryConfigType{{Path: "/test/path", Dirname: "test", Bucket: "test-bucket"}},
+	DataBases:   []DataBaseConfigType{{User: "testuser", Password: "testpass", Address: "localhost", ContainerName: "test-container", DataBaseName: "testdb", IsDocker: false, Bucket: "test-bucket", TypeDB: "mysql"}},
+	S3:          S3ConfigType{Endpoint: "http://s3.test.com", AccessKeyID: "testAccessKey", SecretAccessKey: "testSecretKey"},
+}
+
 func TestLoadConfigAndSaveConfig(t *testing.T) {
 	tempFile, err := ioutil.TempFile("", "backup-service.config.json")
 	if err != nil {
@@ -15,16 +23,8 @@ func TestLoadConfigAndSaveConfig(t *testing.T) {
 	defer os.Remove(tempFile.Name()) // Удаляем файл после теста
 
 	// Создаем тестовую конфигурацию
-	testConfig := &ConfigType{
-		StartTime:   time.Now(),
-		ServerName:  "TestServer",
-		Directories: []DirectoryConfigType{{Path: "/test/path", Dirname: "test", Bucket: "test-bucket"}},
-		DataBases:   []DataBaseConfigType{{User: "testuser", Password: "testpass", Address: "localhost", ContainerName: "test-container", DataBaseName: "testdb", IsDocker: false, Bucket: "test-bucket", TypeDB: "mysql"}},
-		S3:          S3ConfigType{Endpoint: "http://s3.test.com", AccessKeyID: "testAccessKey", SecretAccessKey: "testSecretKey"},
-	}
-
 	// Сохраняем тестовую конфигурацию в временный файл
-	Config = testConfig
+	Config = mockConfig
 	configFileName = tempFile.Name() // Устанавливаем имя файла конфигурации на временный файл
 	SaveConfig()
 
@@ -32,17 +32,17 @@ func TestLoadConfigAndSaveConfig(t *testing.T) {
 	LoadConfig()
 
 	// Проверяем, что загруженная конфигурация совпадает с тестовой
-	if Config.ServerName != testConfig.ServerName {
-		t.Errorf("Ожидалось %s, получено %s", testConfig.ServerName, Config.ServerName)
+	if Config.ServerName != mockConfig.ServerName {
+		t.Errorf("Ожидалось %s, получено %s", mockConfig.ServerName, Config.ServerName)
 	}
-	if len(Config.Directories) != len(testConfig.Directories) || Config.Directories[0].Path != testConfig.Directories[0].Path {
-		t.Errorf("Ожидалось %v, получено %v", testConfig.Directories, Config.Directories)
+	if len(Config.Directories) != len(mockConfig.Directories) || Config.Directories[0].Path != mockConfig.Directories[0].Path {
+		t.Errorf("Ожидалось %v, получено %v", mockConfig.Directories, Config.Directories)
 	}
-	if len(Config.DataBases) != len(testConfig.DataBases) || Config.DataBases[0].User != testConfig.DataBases[0].User {
-		t.Errorf("Ожидалось %v, получено %v", testConfig.DataBases, Config.DataBases)
+	if len(Config.DataBases) != len(mockConfig.DataBases) || Config.DataBases[0].User != mockConfig.DataBases[0].User {
+		t.Errorf("Ожидалось %v, получено %v", mockConfig.DataBases, Config.DataBases)
 	}
-	if Config.S3.Endpoint != testConfig.S3.Endpoint {
-		t.Errorf("Ожидалось %s, получено %s", testConfig.S3.Endpoint, Config.S3.Endpoint)
+	if Config.S3.Endpoint != mockConfig.S3.Endpoint {
+		t.Errorf("Ожидалось %s, получено %s", mockConfig.S3.Endpoint, Config.S3.Endpoint)
 	}
 }
 
