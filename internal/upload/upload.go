@@ -3,6 +3,7 @@ package upload
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"sync"
 
@@ -24,13 +25,33 @@ func Upload(wg *sync.WaitGroup, item config.S3Item) {
 	//conf := config.Config
 }
 
+type MinioClientInterface interface {
+	PutObject(
+		ctx context.Context,
+		bucketName string,
+		objectName string,
+		reader io.Reader,
+		objectSize int64,
+		opts minio.PutObjectOptions,
+	) (info minio.UploadInfo, err error)
+}
+
+var minioClient MinioClientInterface
+
+func newClient(endpoint string, opts *minio.Options) (MinioClientInterface, error) {
+	if minioClient == nil {
+		return minio.New(endpoint, opts)
+	}
+	return minioClient, nil
+}
+
 func uploadToMinio(
 	filePath string,
 	objectName string,
 	bucket string,
 ) error {
 	conf := config.Config
-	minioClient, err := minio.New(conf.S3.Endpoint, &minio.Options{
+	minioClient, err := newClient(conf.S3.Endpoint, &minio.Options{
 		// тут скорее всего надо третьим аргументом токен -- TODO::проверить
 		Creds:  credentials.NewStaticV4(conf.S3.AccessKeyID, conf.S3.SecretAccessKey, ""),
 		Secure: true, //Мб в config
