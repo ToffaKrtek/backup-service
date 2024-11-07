@@ -3,7 +3,6 @@ package config
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -74,7 +73,7 @@ func (c ConfigType) GetStartTime() time.Time {
 var Config *ConfigType
 
 func LoadConfig() {
-	data, err := ioutil.ReadFile(configFileName)
+	data, err := os.ReadFile(configFileName)
 	if err != nil {
 		log.Println("Ошибка чтения конфигурации:", err)
 		return
@@ -89,7 +88,7 @@ func SaveConfig() {
 	if err != nil {
 		log.Println("Ошибка сериализации конфигурации:", err)
 	}
-	if err := ioutil.WriteFile(configFileName, data, 0644); err != nil {
+	if err := os.WriteFile(configFileName, data, 0644); err != nil {
 		log.Println("Ошибка записи конфигурации:", err)
 	}
 }
