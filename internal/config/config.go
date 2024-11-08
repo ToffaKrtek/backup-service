@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/ToffaKrtek/backup-service/internal/socket"
 )
 
 type S3Item struct {
@@ -17,7 +19,18 @@ type S3Item struct {
 }
 
 var configFileName = "backup-service.config.json"
+var historyFileName = "backup-service.history.json"
 
+type HistoryType struct {
+	Uploads []HistoryUploadItem `json:"uploads"`
+}
+type HistoryUploadItem struct {
+	DateTime time.Time `json:"datetime"`
+	Size     string    `json:"size"`
+	ItemType string    `json:"type"`
+	Status   string    `json:"status"`
+	FileName string    `json:"filename"`
+}
 type ConfigType struct {
 	StartTime   time.Time             `json:"start_time"`
 	ServerName  string                `json:"server_name"`
@@ -30,12 +43,26 @@ type S3ConfigType struct {
 	Endpoint        string `json:"endpoint"`
 	AccessKeyID     string `json:"access_key_id"`
 	SecretAccessKey string `json:"secret_access_key"`
+	Send            bool   `json:"send"`
 }
 
 type DirectoryConfigType struct {
 	Path    string `json:"path"`
 	Dirname string `json:"dirname"`
 	Bucket  string `json:"s3_bucket"`
+	Active  bool   `json:"active"`
+}
+
+var DbTypes = []string{"Невыбрано", "Mysql", "PostgreSql"}
+var DbTypesMap = map[string]int{
+	"Mysql":      1,
+	"PostgreSql": 2,
+	"":           0,
+}
+
+var ActiveMap = map[bool]string{
+	true:  "Активно",
+	false: "Не активно",
 }
 
 type DataBaseConfigType struct {
@@ -47,6 +74,7 @@ type DataBaseConfigType struct {
 	IsDocker      bool   `json:"is_docker"`
 	Bucket        string `json:"s3_bucket"`
 	TypeDB        string `json:"type_db"`
+	Active        bool   `json:"active"`
 }
 
 func (s S3ConfigType) String() string {
@@ -69,6 +97,39 @@ func (c ConfigType) String() string {
 func (c ConfigType) GetStartTime() time.Time {
 	return c.StartTime
 }
+
+var History *HistoryType
+
+func LoadHistory() {
+
+	if _, err := os.Stat(historyFileName); os.IsNotExist(err) {
+		emptyHistory := HistoryType{}
+		data, err := json.MarshalIndent(emptyHistory, "", "  ")
+		if err != nil {
+			log.Println("Ошибка сериализации истории отправки:", err)
+			return
+		}
+
+		if err := os.WriteFile(historyFileName, data, 0644); err != nil {
+			log.Println("Ошибка записи истории отправки:", err)
+			return
+		}
+
+		History = &emptyHistory
+		log.Println("История отправки создана:", Config)
+		return
+	}
+	data, err := os.ReadFile(historyFileName)
+	if err != nil {
+		log.Println("Ошибка чтения истории отправки:", err)
+		return
+	}
+	if err := json.Unmarshal(data, &History); err != nil {
+		log.Println("Ошибка парсинга истории отправки:", err)
+	}
+}
+
+//TODO:: add to history
 
 var Config *ConfigType
 
@@ -121,18 +182,20 @@ func SaveConfig() {
 	if err := os.WriteFile(configFileName, data, 0644); err != nil {
 		log.Println("Ошибка записи конфигурации:", err)
 	}
+	socket.TriggerSocket()
 }
 
 func UpdateConfigHandler(conn net.Conn) {
 	defer conn.Close()
 
-	var newConfig *ConfigType
-	if err := json.NewDecoder(conn).Decode(newConfig); err != nil {
-		log.Println("Ошибка декодирования новой конфигурации:", err)
-		return
-	}
-	Config = newConfig
-	SaveConfig()
+	// var newConfig *ConfigType
+	// if err := json.NewDecoder(conn).Decode(newConfig); err != nil {
+	// 	log.Println("Ошибка декодирования новой конфигурации:", err)
+	// 	return
+	// }
+	// Config = newConfig
+	// SaveConfig()
+	LoadConfig()
 	log.Println("Конфигурация обновлена:", *Config)
 }
 
