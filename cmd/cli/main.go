@@ -40,7 +40,8 @@ func main() {
 			setRightItem(3)
 		}).
 		AddButton("Выполнить сейчас", func() {
-
+			config.Config.StartTime = time.Now().Add(2 * time.Second)
+			config.SaveConfig(true)
 		}).
 		AddButton("Отключить", func() {
 
@@ -192,7 +193,7 @@ func configureFrame() *tview.Frame {
 		).
 		AddButton("Сохранить", func() {
 			// Логика сохранения конфигурации
-			config.SaveConfig()
+			config.SaveConfig(true)
 			setRightItem(0)
 		})
 	return tview.NewFrame(mainForm)
@@ -207,7 +208,7 @@ func databaseFrame() *tview.Frame {
 		dbForm := tview.NewForm()
 		dbForm.AddButton("Создать", func() {
 			config.Config.DataBases = append(config.Config.DataBases, config.DataBaseConfigType{})
-			config.SaveConfig()
+			config.SaveConfig(true)
 			setRightItem(1)
 		})
 
@@ -252,13 +253,13 @@ func databaseFrame() *tview.Frame {
 				}).
 				AddButton("Сохранить", func() {
 					editDataBase = false
-					config.SaveConfig()
+					config.SaveConfig(true)
 					setRightItem(1)
 				}).
 				AddButton("Удалить", func() {
 					editDataBase = false
 					config.Config.DataBases = append(config.Config.DataBases[:selectedDataBase], config.Config.DataBases[selectedDataBase+1:]...)
-					config.SaveConfig()
+					config.SaveConfig(true)
 					setRightItem(1)
 				})
 			return tview.NewFrame(editDbForm)
@@ -289,7 +290,7 @@ func databaseFrame() *tview.Frame {
 	}).SetSelectedFunc(func(row, column int) {
 		if row == len(config.Config.DataBases)+1 {
 			config.Config.DataBases = append(config.Config.DataBases, config.DataBaseConfigType{})
-			config.SaveConfig()
+			config.SaveConfig(true)
 			setRightItem(1)
 		} else {
 			selectedDataBase = row - 1
@@ -310,7 +311,7 @@ func dirFrame() *tview.Frame {
 		dirForm := tview.NewForm()
 		dirForm.AddButton("Создать", func() {
 			config.Config.Directories = append(config.Config.Directories, config.DirectoryConfigType{})
-			config.SaveConfig()
+			config.SaveConfig(true)
 			setRightItem(2)
 		})
 		return tview.NewFrame(dirForm)
@@ -332,13 +333,13 @@ func dirFrame() *tview.Frame {
 				}).
 				AddButton("Сохранить", func() {
 					editDir = false
-					config.SaveConfig()
+					config.SaveConfig(true)
 					setRightItem(2)
 				}).
 				AddButton("Удалить", func() {
 					editDir = false
 					config.Config.Directories = append(config.Config.Directories[:selectedDir], config.Config.Directories[selectedDir+1:]...)
-					config.SaveConfig()
+					config.SaveConfig(true)
 					setRightItem(2)
 				})
 			return tview.NewFrame(editDirForm)
@@ -367,7 +368,7 @@ func dirFrame() *tview.Frame {
 	}).SetSelectedFunc(func(row, column int) {
 		if row == len(config.Config.Directories)+1 {
 			config.Config.Directories = append(config.Config.Directories, config.DirectoryConfigType{})
-			config.SaveConfig()
+			config.SaveConfig(true)
 			setRightItem(2)
 		} else {
 			selectedDir = row - 1
@@ -394,7 +395,7 @@ func s3Frame() *tview.Frame {
 			config.Config.S3.Send = checked
 		}).
 		AddButton("Сохранить", func() {
-			config.SaveConfig()
+			config.SaveConfig(true)
 			setRightItem(3)
 		}).
 		AddButton("Проверить соединение", func() {

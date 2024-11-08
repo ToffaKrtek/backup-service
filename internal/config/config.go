@@ -174,7 +174,7 @@ func LoadConfig() {
 	}
 }
 
-func SaveConfig() {
+func SaveConfig(trigger bool) {
 	data, err := json.Marshal(Config)
 	if err != nil {
 		log.Println("Ошибка сериализации конфигурации:", err)
@@ -182,7 +182,9 @@ func SaveConfig() {
 	if err := os.WriteFile(configFileName, data, 0644); err != nil {
 		log.Println("Ошибка записи конфигурации:", err)
 	}
-	socket.TriggerSocket()
+	if trigger {
+		socket.TriggerSocket()
+	}
 }
 
 func UpdateConfigHandler(conn net.Conn) {

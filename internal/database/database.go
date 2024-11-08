@@ -45,10 +45,12 @@ var execCommand CmdInterface
 
 func Dump(wg *sync.WaitGroup, files chan config.S3Item) {
 	conf := config.Config
+	fmt.Printf("Запуск создания дампов для %d БД", len(conf.DataBases))
 	for _, db := range conf.DataBases {
 		wg.Add(1)
 		go func(db config.DataBaseConfigType) {
 			defer wg.Done()
+			defer fmt.Println("Закончена архивация")
 			switch db.TypeDB {
 			case "postgre":
 				files <- config.S3Item{
@@ -63,7 +65,7 @@ func Dump(wg *sync.WaitGroup, files chan config.S3Item) {
 				}
 			case "mysql":
 				if db.IsDocker {
-					files <- config.S3Item{
+					item := config.S3Item{
 						ObjectName: db.DataBaseName,
 						Bucket:     db.Bucket,
 						FilePath: dumpMysqlDocker(
@@ -73,6 +75,8 @@ func Dump(wg *sync.WaitGroup, files chan config.S3Item) {
 							db.Password,
 						),
 					}
+					fmt.Println(item.FilePath)
+					files <- item
 				} else {
 					files <- config.S3Item{
 						ObjectName: db.DataBaseName,
