@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"sync"
@@ -13,8 +14,10 @@ import (
 	"github.com/ToffaKrtek/backup-service/internal/upload"
 )
 
-var jobQueue []func()
+// var jobQueue func()
 var mu sync.Mutex
+var cancelChan chan struct{}
+var jobRunning bool
 
 func main() {
 	config.LoadConfig()
@@ -27,38 +30,66 @@ func main() {
 }
 
 func scheduleJob() {
+	fmt.Println("Зашел scheduleJob")
 	mu.Lock()
 	defer mu.Unlock()
 
-	jobQueue = append(jobQueue, func() {
-		now := time.Now()
-		startTime := config.Config.GetStartTime()
+	jobRunning = true
+	cancelChan = make(chan struct{}, 1)
 
-		if now.Before(startTime) {
-			time.Sleep(startTime.Sub(now))
-		}
+	fmt.Println("append jobQueue")
+	go func() {
+		fmt.Println("Запуск очереди")
+		select {
+		case <-cancelChan:
+			fmt.Println("Джоба отменена")
+			jobRunning = false
+			return
+		default:
+			now := time.Now()
+			startTime := config.Config.GetStartTime()
 
-		var wg sync.WaitGroup
-		files := make(chan config.S3Item)
-		go archive.Archive(&wg, files)
-		go database.Dump(&wg, files)
+			if now.Before(startTime) {
+				time.Sleep(startTime.Sub(now))
+			}
+			fmt.Println("Запуск джоб")
+			var wg sync.WaitGroup
+			files := make(chan config.S3Item)
+			wg.Add(2)
+			go func() {
+				defer wg.Done()
+				archive.Archive(&wg, files)
+			}()
+			go func() {
+				defer wg.Done()
+				database.Dump(&wg, files)
+			}()
 
-		go func() {
+			fmt.Println("Ожидание")
+			go func() {
+				wg.Wait()
+				close(files)
+			}()
+			for item := range files {
+				upload.Upload(&wg, item)
+			}
 			wg.Wait()
-			close(files)
-		}()
-		for item := range files {
-			upload.Upload(&wg, item)
-			wg.Wait()
+			config.Config.StartTime = config.Config.StartTime.Add(24 * time.Hour)
+			config.SaveConfig(false)
+			scheduleJob()
 		}
-		config.Config.StartTime = config.Config.StartTime.Add(24 * time.Hour)
-		config.SaveConfig()
-		scheduleJob()
-	})
-	go jobQueue[len(jobQueue)-1]()
+	}()
 }
 
 func rerunJobQueueHandler(conn net.Conn) {
+
+	fmt.Println("Перезапуск очереди")
+	if jobRunning {
+		fmt.Println("jobRunning")
+		cancelChan <- struct{}{}
+		fmt.Println("time.Sleep")
+		time.Sleep(100 * time.Millisecond)
+	}
 	defer conn.Close()
 	scheduleJob()
 }

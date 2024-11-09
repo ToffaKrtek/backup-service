@@ -13,14 +13,20 @@ import (
 )
 
 func Upload(wg *sync.WaitGroup, item config.S3Item) {
+	fmt.Println("Запуск отправки")
 	wg.Add(1)
 	go func(item config.S3Item) {
 		defer wg.Done()
-		uploadToMinio(
+		err := uploadToMinio(
 			item.FilePath,
 			item.ObjectName,
 			item.Bucket,
 		)
+		if err != nil {
+			fmt.Printf("Ошибка:", err)
+		} else {
+			fmt.Println("Отправлено")
+		}
 	}(item)
 	//conf := config.Config
 }

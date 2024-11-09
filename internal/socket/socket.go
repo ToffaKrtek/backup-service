@@ -28,7 +28,7 @@ func SocketStart(connFuncs ...ConnFunc) {
 		go func(c net.Conn) {
 			defer c.Close()
 			for _, cf := range connFuncs {
-				go cf(c)
+				cf(c)
 			}
 		}(conn)
 	}
