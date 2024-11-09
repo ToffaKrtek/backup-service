@@ -26,7 +26,7 @@ func TestLoadConfigAndSaveConfig(t *testing.T) {
 	// Сохраняем тестовую конфигурацию в временный файл
 	Config = mockConfig
 	configFileName = tempFile.Name() // Устанавливаем имя файла конфигурации на временный файл
-	SaveConfig()
+	SaveConfig(false)
 
 	// Загружаем конфигурацию из временного файла
 	LoadConfig()
