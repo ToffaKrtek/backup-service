@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/ToffaKrtek/backup-service/internal/config"
 	"github.com/minio/minio-go/v7"
@@ -13,7 +14,7 @@ import (
 )
 
 func Upload(wg *sync.WaitGroup, item config.S3Item) {
-	fmt.Println("Запуск отправки")
+	fmt.Println("Запуск отправки:", item.ObjectName)
 	wg.Add(1)
 	go func(item config.S3Item) {
 		defer wg.Done()
@@ -22,11 +23,20 @@ func Upload(wg *sync.WaitGroup, item config.S3Item) {
 			item.ObjectName,
 			item.Bucket,
 		)
+		status := "Успешно"
 		if err != nil {
 			fmt.Printf("Ошибка:", err)
+			status = "Ошибка"
 		} else {
-			fmt.Println("Отправлено")
+			fmt.Println("Отправлено:", item.ObjectName)
 		}
+		config.SaveHistoryItem(config.HistoryUploadItem{
+			DateTime: time.Now(),
+			ItemType: item.ItemType,
+			Size:     item.Size,
+			Status:   status,
+			FileName: item.ObjectName,
+		})
 	}(item)
 	//conf := config.Config
 }
@@ -75,7 +85,7 @@ func uploadToMinio(
 	if err != nil {
 		return fmt.Errorf("Не удалось получить информацию о файле: %v", err)
 	}
-	curObjName := config.GetFileName(conf.ServerName + objectName + "_%s")
+	curObjName := config.GetFileName(conf.ServerName + "_%s_" + objectName)
 	options := minio.PutObjectOptions{}
 	_, err = minioClient.PutObject(
 		context.Background(),
