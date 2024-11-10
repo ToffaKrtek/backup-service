@@ -16,10 +16,12 @@ type S3Item struct {
 	ObjectName string
 	FilePath   string
 	Bucket     string
+	ItemType   string
+	Size       string
 }
 
-var configFileName = "backup-service.config.json"
-var historyFileName = "backup-service.history.json"
+var configFileName = "/backup-service.config.json"
+var historyFileName = "/backup-service.history.json"
 
 type HistoryType struct {
 	Uploads []HistoryUploadItem `json:"uploads"`
@@ -33,6 +35,7 @@ type HistoryUploadItem struct {
 }
 type ConfigType struct {
 	StartTime   time.Time             `json:"start_time"`
+	EveryDay    bool                  `json:"every_day"`
 	ServerName  string                `json:"server_name"`
 	Directories []DirectoryConfigType `json:"directories"`
 	DataBases   []DataBaseConfigType  `json:"data_bases"`
@@ -53,7 +56,7 @@ type DirectoryConfigType struct {
 	Active  bool   `json:"active"`
 }
 
-var DbTypes = []string{"Невыбрано", "Mysql", "PostgreSql"}
+var DbTypes = []string{"Не выбрано", "mysql", "postgre"}
 var DbTypesMap = map[string]int{
 	"Mysql":      1,
 	"PostgreSql": 2,
@@ -129,7 +132,27 @@ func LoadHistory() {
 	}
 }
 
-//TODO:: add to history
+// TODO:: add to history
+func SaveHistoryItem(item HistoryUploadItem) {
+	if History == nil {
+		LoadHistory()
+	}
+	History.Uploads = append(History.Uploads, item)
+
+	if len(History.Uploads) > 5 {
+		History.Uploads = History.Uploads[len(History.Uploads)-5:]
+	}
+
+	data, err := json.MarshalIndent(History, "", "  ")
+	if err != nil {
+		log.Println("Ошибка сериализации истории отправки:", err)
+		return
+	}
+
+	if err := os.WriteFile(historyFileName, data, 0644); err != nil {
+		log.Println("Ошибка записи истории отправки:", err)
+	}
+}
 
 var Config *ConfigType
 
@@ -205,4 +228,19 @@ func GetFileName(template string) string {
 	tempDir := os.TempDir()
 	timestamp := time.Now().Format("20060102_150405")
 	return filepath.Join(tempDir, fmt.Sprintf(template, timestamp))
+}
+func GetFileSize(filePath string) string {
+	// Получаем информацию о файле
+	fileInfo, err := os.Stat(filePath)
+	if err != nil {
+		return ""
+	}
+	fileSize := fileInfo.Size()
+
+	gbSize := float64(fileSize) / (1024 * 1024 * 1024)
+
+	if gbSize < 1 {
+		return "<1 Гб"
+	}
+	return fmt.Sprintf("%.2f Гб", gbSize)
 }

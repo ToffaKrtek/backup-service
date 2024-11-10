@@ -15,23 +15,27 @@ func Archive(wg *sync.WaitGroup, files chan config.S3Item) {
 	conf := config.Config
 	fmt.Printf("Запуск архивации для %d директорий", len(conf.Directories))
 	for _, dir := range conf.Directories {
-		wg.Add(1)
-		go func(dir config.DirectoryConfigType) {
-			defer wg.Done()
-			defer fmt.Println("Закончена архивация")
-			archivePath := config.GetFileName(dir.Dirname + "_%s.zip")
-			if err := zipDirectory(dir.Path, archivePath); err == nil {
-				item := config.S3Item{
-					Bucket:     dir.Bucket,
-					FilePath:   archivePath,
-					ObjectName: dir.Dirname,
+		if dir.Active {
+			wg.Add(1)
+			go func(dir config.DirectoryConfigType) {
+				defer wg.Done()
+				defer fmt.Println("Закончена архивация")
+				archivePath := config.GetFileName(dir.Dirname + "_%s.zip")
+				if err := zipDirectory(dir.Path, archivePath); err == nil {
+					item := config.S3Item{
+						Bucket:     dir.Bucket,
+						FilePath:   archivePath,
+						ObjectName: dir.Dirname + ".zip",
+						ItemType:   "Архив",
+						Size:       config.GetFileSize(archivePath),
+					}
+					fmt.Println(item.FilePath)
+					files <- item
+				} else {
+					fmt.Printf("Ошибка: %v", err)
 				}
-				fmt.Println(item.FilePath)
-				files <- item
-			} else {
-				fmt.Printf("Ошибка: %v", err)
-			}
-		}(dir)
+			}(dir)
+		}
 	}
 }
 func zipDirectory(source string, target string) error {

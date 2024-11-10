@@ -191,6 +191,9 @@ func configureFrame() *tview.Frame {
 				}
 			},
 		).
+		AddCheckbox("Запуск каждый день (раз в неделю если нет)", config.Config.EveryDay, func(checked bool) {
+			config.Config.EveryDay = checked
+		}).
 		AddButton("Сохранить", func() {
 			// Логика сохранения конфигурации
 			config.SaveConfig(true)
@@ -244,7 +247,7 @@ func databaseFrame() *tview.Frame {
 					config.DbTypesMap[config.Config.DataBases[selectedDataBase].TypeDB],
 					func(option string, optionIndex int) {
 						if optionIndex > 0 {
-							config.Config.DataBases[selectedDataBase].TypeDB = strings.ToLower(option)
+							config.Config.DataBases[selectedDataBase].TypeDB = option
 						}
 					},
 				).

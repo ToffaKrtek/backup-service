@@ -74,7 +74,11 @@ func scheduleJob() {
 				upload.Upload(&wg, item)
 			}
 			wg.Wait()
-			config.Config.StartTime = config.Config.StartTime.Add(24 * time.Hour)
+			if config.Config.EveryDay {
+				config.Config.StartTime = config.Config.StartTime.Add(24 * time.Hour)
+			} else {
+				config.Config.StartTime = config.Config.StartTime.Add(7 * 24 * time.Hour)
+			}
 			config.SaveConfig(false)
 			scheduleJob()
 		}
