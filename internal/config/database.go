@@ -49,7 +49,7 @@ func UpdateDatabase(db DataBaseConfigType) {
 
 func DeleteDatabase(db DataBaseConfigType) {
 	LoadConfig()
-	for i, _ := range Config.Schedules {
+	for i := range Config.Schedules {
 		delete(Config.Schedules[i].DataBases, db.Index)
 	}
 	delete(Config.DataBases, db.Index)

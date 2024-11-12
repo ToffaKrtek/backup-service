@@ -131,7 +131,7 @@ func editScheduleForm() *tview.Frame {
 func showDatabaseSelection() *tview.Frame {
 	selectionForm := tview.NewForm()
 	selectedDatabases := make(map[string]bool)
-	for index, _ := range config.Config.DataBases {
+	for index := range config.Config.DataBases {
 		val := false
 		if _, exist := config.Config.Schedules[selectedSchedule].DataBases[index]; exist {
 			val = true
@@ -170,7 +170,7 @@ func showDatabaseSelection() *tview.Frame {
 func showDirectorySelection() *tview.Frame {
 	selectionForm := tview.NewForm()
 	selectedDirs := make(map[string]bool)
-	for index, _ := range config.Config.Directories {
+	for index := range config.Config.Directories {
 		val := false
 		if _, exist := config.Config.Schedules[selectedSchedule].Directories[index]; exist {
 			val = true

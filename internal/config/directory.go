@@ -38,7 +38,7 @@ func UpdateDirectory(dir DirectoryConfigType) {
 
 func DeleteDirectory(dir DirectoryConfigType) {
 	LoadConfig()
-	for i, _ := range Config.Schedules {
+	for i := range Config.Schedules {
 		delete(Config.Schedules[i].Directories, dir.Index)
 	}
 	delete(Config.Directories, dir.Index)
