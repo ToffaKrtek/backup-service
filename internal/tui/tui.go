@@ -40,6 +40,7 @@ func Run() {
 		}).
 		AddButton("Выполнить сейчас", func() {
 			config.Config.StartTime = time.Now().Add(2 * time.Second)
+			config.UpdateConfig(*config.Config, true)
 			config.SaveConfig(true)
 		}).
 		AddButton("Отключить", func() {
