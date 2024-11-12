@@ -37,7 +37,7 @@ func SocketStart(connFuncs ...ConnFunc) {
 func TriggerSocket() {
 	conn, err := net.Dial("unix", socketPath)
 	if err != nil {
-		log.Printf("Не удалось подключится к сокету: %v", err)
+		log.Println("Не удалось подключится к сокету: ", err)
 		return
 	}
 	defer conn.Close()
