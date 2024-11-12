@@ -8,11 +8,16 @@ import (
 )
 
 var mockConfig = &ConfigType{
-	StartTime:   time.Now(),
-	ServerName:  "TestServer",
-	Directories: []DirectoryConfigType{{Path: "/test/path", Dirname: "test", Bucket: "test-bucket"}},
-	DataBases:   []DataBaseConfigType{{User: "testuser", Password: "testpass", Address: "localhost", ContainerName: "test-container", DataBaseName: "testdb", IsDocker: false, Bucket: "test-bucket", TypeDB: "mysql"}},
-	S3:          S3ConfigType{Endpoint: "http://s3.test.com", AccessKeyID: "testAccessKey", SecretAccessKey: "testSecretKey"},
+	StartTime:  time.Now(),
+	ServerName: "TestServer",
+	Schedules: []ScheduleConfigType{
+		{
+			StartTime:    time.Now(),
+			ScheduleName: "Test",
+			EveryDay:     true,
+		},
+	},
+	S3: S3ConfigType{Endpoint: "http://s3.test.com", AccessKeyID: "testAccessKey", SecretAccessKey: "testSecretKey"},
 }
 
 func TestLoadConfigAndSaveConfig(t *testing.T) {
@@ -35,11 +40,8 @@ func TestLoadConfigAndSaveConfig(t *testing.T) {
 	if Config.ServerName != mockConfig.ServerName {
 		t.Errorf("Ожидалось %s, получено %s", mockConfig.ServerName, Config.ServerName)
 	}
-	if len(Config.Directories) != len(mockConfig.Directories) || Config.Directories[0].Path != mockConfig.Directories[0].Path {
-		t.Errorf("Ожидалось %v, получено %v", mockConfig.Directories, Config.Directories)
-	}
-	if len(Config.DataBases) != len(mockConfig.DataBases) || Config.DataBases[0].User != mockConfig.DataBases[0].User {
-		t.Errorf("Ожидалось %v, получено %v", mockConfig.DataBases, Config.DataBases)
+	if len(Config.Schedules) != len(mockConfig.Schedules) {
+		t.Errorf("Ожидалось %v, получено %v", mockConfig.Schedules, Config.Schedules)
 	}
 	if Config.S3.Endpoint != mockConfig.S3.Endpoint {
 		t.Errorf("Ожидалось %s, получено %s", mockConfig.S3.Endpoint, Config.S3.Endpoint)

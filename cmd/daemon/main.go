@@ -46,25 +46,42 @@ func scheduleJob() {
 			jobRunning = false
 			return
 		default:
+			config.LoadConfig()
 			now := time.Now()
 			startTime := config.Config.GetStartTime()
 
 			if now.Before(startTime) {
 				time.Sleep(startTime.Sub(now))
 			}
-			fmt.Println("Запуск джоб")
+			nextDay := config.Config.StartTime.Add(24 * time.Hour)
 			var wg sync.WaitGroup
 			files := make(chan config.S3Item)
-			wg.Add(2)
-			go func() {
-				defer wg.Done()
-				archive.Archive(&wg, files)
-			}()
-			go func() {
-				defer wg.Done()
-				database.Dump(&wg, files)
-			}()
-
+			for i, schedule := range config.Config.Schedules {
+				fmt.Println("Джоба", schedule.ScheduleName)
+				if schedule.StartTime.Before(config.Config.StartTime) {
+					fmt.Println("Запуск джобы", schedule.ScheduleName)
+					if len(schedule.Directories) > 0 {
+						wg.Add(1)
+						go func() {
+							defer wg.Done()
+							archive.Archive(&wg, schedule.Directories, files)
+						}()
+					}
+					if len(schedule.DataBases) > 0 {
+						wg.Add(1)
+						go func() {
+							defer wg.Done()
+							database.Dump(&wg, schedule.DataBases, files)
+						}()
+					}
+					if schedule.EveryDay {
+						config.Config.Schedules[i].StartTime = nextDay
+					} else {
+						config.Config.Schedules[i].StartTime = config.Config.StartTime.Add(7 * 24 * time.Hour)
+					}
+				}
+				continue
+			}
 			fmt.Println("Ожидание")
 			go func() {
 				wg.Wait()
@@ -74,7 +91,7 @@ func scheduleJob() {
 				upload.Upload(&wg, item)
 			}
 			wg.Wait()
-			config.Config.StartTime = config.Config.StartTime.Add(24 * time.Hour)
+			config.Config.StartTime = nextDay
 			config.SaveConfig(false)
 			scheduleJob()
 		}
