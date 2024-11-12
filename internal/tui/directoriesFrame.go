@@ -75,7 +75,7 @@ func DirFrame() *tview.Frame {
 			config.CreateDirectory()
 			SetRightItem(3)
 		} else {
-			cell := dirTable.GetCell(row, 2)
+			cell := dirTable.GetCell(row, 1)
 			selectedDir = cell.Text
 			editDir = true
 			SetRightItem(3)
