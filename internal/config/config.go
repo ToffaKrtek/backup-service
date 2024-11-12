@@ -1,6 +1,8 @@
 package config
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -21,25 +23,20 @@ type S3Item struct {
 }
 
 var configFileName = "/backup-service.config.json"
-var historyFileName = "/backup-service.history.json"
+var configFileNameTmp = "/tmp/backup-service.config.json"
+var isTmp = false
 
-type HistoryType struct {
-	Uploads []HistoryUploadItem `json:"uploads"`
+func SetTmp(val bool) {
+	isTmp = val
 }
-type HistoryUploadItem struct {
-	DateTime time.Time `json:"datetime"`
-	Size     string    `json:"size"`
-	ItemType string    `json:"type"`
-	Status   string    `json:"status"`
-	FileName string    `json:"filename"`
-}
+
 type ConfigType struct {
-	StartTime   time.Time             `json:"start_time"`
-	EveryDay    bool                  `json:"every_day"`
-	ServerName  string                `json:"server_name"`
-	Directories []DirectoryConfigType `json:"directories"`
-	DataBases   []DataBaseConfigType  `json:"data_bases"`
-	S3          S3ConfigType          `json:"s3"`
+	StartTime   time.Time                      `json:"start_time"`
+	ServerName  string                         `json:"server_name"`
+	Schedules   []ScheduleConfigType           `json:"schedules"`
+	Directories map[string]DirectoryConfigType `json:"directories"`
+	DataBases   map[string]DataBaseConfigType  `json:"data_bases"`
+	S3          S3ConfigType                   `json:"s3"`
 }
 
 type S3ConfigType struct {
@@ -49,121 +46,42 @@ type S3ConfigType struct {
 	Send            bool   `json:"send"`
 }
 
-type DirectoryConfigType struct {
-	Path    string `json:"path"`
-	Dirname string `json:"dirname"`
-	Bucket  string `json:"s3_bucket"`
-	Active  bool   `json:"active"`
-}
-
-var DbTypes = []string{"Не выбрано", "mysql", "postgre"}
-var DbTypesMap = map[string]int{
-	"Mysql":      1,
-	"PostgreSql": 2,
-	"":           0,
-}
-
 var ActiveMap = map[bool]string{
-	true:  "Активно",
-	false: "Не активно",
-}
-
-type DataBaseConfigType struct {
-	User          string `json:"user"`
-	Password      string `json:"password"`
-	Address       string `json:"address"`
-	ContainerName string `json:"container_name"`
-	DataBaseName  string `json:"db_name"`
-	IsDocker      bool   `json:"is_docker"`
-	Bucket        string `json:"s3_bucket"`
-	TypeDB        string `json:"type_db"`
-	Active        bool   `json:"active"`
+	true:  "✓",
+	false: "✗",
 }
 
 func (s S3ConfigType) String() string {
 	return fmt.Sprintf("S3ConfigType{Endpoint: %s, AccessKeyID: %s, SecretAccessKey: %s}", s.Endpoint, s.AccessKeyID, s.SecretAccessKey)
 }
 
-func (d DirectoryConfigType) String() string {
-	return fmt.Sprintf("DirectoryConfigType{Path: %s, Bucket: %s}", d.Path, d.Bucket)
-}
-
-func (d DataBaseConfigType) String() string {
-	return fmt.Sprintf("DataBaseConfigType{User: %s, Address: %s, ContainerName: %s, IsDocker: %t, Bucket: %s}", d.User, d.Address, d.ContainerName, d.IsDocker, d.Bucket)
-}
-
 func (c ConfigType) String() string {
-	return fmt.Sprintf("ConfigType{StartTime: %s, ServerName: %s, Directories: %v, DataBases: %v, S3: %s}",
-		c.StartTime.Format(time.RFC3339), c.ServerName, c.Directories, c.DataBases, c.S3)
+	return fmt.Sprintf("ConfigType{StartTime: %s, ServerName: %s, Schedules: %s, S3: %s}",
+		c.StartTime.Format(time.RFC3339), c.ServerName, c.Schedules, c.S3)
 }
 
 func (c ConfigType) GetStartTime() time.Time {
 	return c.StartTime
 }
 
-var History *HistoryType
-
-func LoadHistory() {
-
-	if _, err := os.Stat(historyFileName); os.IsNotExist(err) {
-		emptyHistory := HistoryType{}
-		data, err := json.MarshalIndent(emptyHistory, "", "  ")
-		if err != nil {
-			log.Println("Ошибка сериализации истории отправки:", err)
-			return
-		}
-
-		if err := os.WriteFile(historyFileName, data, 0644); err != nil {
-			log.Println("Ошибка записи истории отправки:", err)
-			return
-		}
-
-		History = &emptyHistory
-		log.Println("История отправки создана:", Config)
-		return
-	}
-	data, err := os.ReadFile(historyFileName)
-	if err != nil {
-		log.Println("Ошибка чтения истории отправки:", err)
-		return
-	}
-	if err := json.Unmarshal(data, &History); err != nil {
-		log.Println("Ошибка парсинга истории отправки:", err)
-	}
-}
-
-// TODO:: add to history
-func SaveHistoryItem(item HistoryUploadItem) {
-	if History == nil {
-		LoadHistory()
-	}
-	History.Uploads = append(History.Uploads, item)
-
-	if len(History.Uploads) > 5 {
-		History.Uploads = History.Uploads[len(History.Uploads)-5:]
-	}
-
-	data, err := json.MarshalIndent(History, "", "  ")
-	if err != nil {
-		log.Println("Ошибка сериализации истории отправки:", err)
-		return
-	}
-
-	if err := os.WriteFile(historyFileName, data, 0644); err != nil {
-		log.Println("Ошибка записи истории отправки:", err)
-	}
-}
-
 var Config *ConfigType
 
 func LoadConfig() {
-	if _, err := os.Stat(configFileName); os.IsNotExist(err) {
+	confFile := configFileName
+	if isTmp {
+		confFile = configFileNameTmp
+	}
+	if _, err := os.Stat(confFile); os.IsNotExist(err) {
 		log.Println("Файл конфигурации не найден. Создание дефолтной конфигурации.")
+		nextDay := time.Now().Add(24 * time.Hour)
 		defaultConfig := ConfigType{
-			StartTime:   time.Now().Add(24 * time.Hour),
+			StartTime:   nextDay,
 			ServerName:  "default_server",
-			Directories: []DirectoryConfigType{},
-			DataBases:   []DataBaseConfigType{},
+			Directories: map[string]DirectoryConfigType{},
+			DataBases:   map[string]DataBaseConfigType{},
+			Schedules: []ScheduleConfigType{
+				makeSchedule(),
+			},
 			S3: S3ConfigType{
 				Endpoint:        "default_endpoint",
 				AccessKeyID:     "default_access_key",
@@ -177,7 +95,7 @@ func LoadConfig() {
 			return
 		}
 
-		if err := os.WriteFile(configFileName, data, 0644); err != nil {
+		if err := os.WriteFile(confFile, data, 0644); err != nil {
 			log.Println("Ошибка записи дефолтной конфигурации:", err)
 			return
 		}
@@ -187,7 +105,7 @@ func LoadConfig() {
 		return
 	}
 
-	data, err := os.ReadFile(configFileName)
+	data, err := os.ReadFile(confFile)
 	if err != nil {
 		log.Println("Ошибка чтения конфигурации:", err)
 		return
@@ -198,11 +116,15 @@ func LoadConfig() {
 }
 
 func SaveConfig(trigger bool) {
+	confFile := configFileName
+	if isTmp {
+		confFile = configFileNameTmp
+	}
 	data, err := json.Marshal(Config)
 	if err != nil {
 		log.Println("Ошибка сериализации конфигурации:", err)
 	}
-	if err := os.WriteFile(configFileName, data, 0644); err != nil {
+	if err := os.WriteFile(confFile, data, 0644); err != nil {
 		log.Println("Ошибка записи конфигурации:", err)
 	}
 	if trigger {
@@ -212,14 +134,6 @@ func SaveConfig(trigger bool) {
 
 func UpdateConfigHandler(conn net.Conn) {
 	defer conn.Close()
-
-	// var newConfig *ConfigType
-	// if err := json.NewDecoder(conn).Decode(newConfig); err != nil {
-	// 	log.Println("Ошибка декодирования новой конфигурации:", err)
-	// 	return
-	// }
-	// Config = newConfig
-	// SaveConfig()
 	LoadConfig()
 	log.Println("Конфигурация обновлена:", *Config)
 }
@@ -229,8 +143,8 @@ func GetFileName(template string) string {
 	timestamp := time.Now().Format("20060102_150405")
 	return filepath.Join(tempDir, fmt.Sprintf(template, timestamp))
 }
+
 func GetFileSize(filePath string) string {
-	// Получаем информацию о файле
 	fileInfo, err := os.Stat(filePath)
 	if err != nil {
 		return ""
@@ -243,4 +157,35 @@ func GetFileSize(filePath string) string {
 		return "<1 Гб"
 	}
 	return fmt.Sprintf("%.2f Гб", gbSize)
+}
+
+func getIndex() string {
+	now := time.Now().String()
+	hash := sha256.New()
+	hash.Write([]byte(now))
+	hashBytes := hash.Sum(nil)
+	return hex.EncodeToString(hashBytes)
+}
+
+func UpdateConfig(conf ConfigType) {
+	LoadConfig()
+	withTrigger := false
+	if conf.StartTime.Minute() != Config.StartTime.Minute() ||
+		conf.StartTime.Hour() != Config.StartTime.Hour() {
+		withTrigger = true
+		for i, schedule := range conf.Schedules {
+			conf.Schedules[i].StartTime = time.Date(
+				schedule.StartTime.Year(),
+				schedule.StartTime.Month(),
+				schedule.StartTime.Day(),
+				conf.StartTime.Hour(),
+				conf.StartTime.Minute(),
+				conf.StartTime.Second(),
+				0,
+				conf.StartTime.Location(),
+			)
+		}
+	}
+	Config = &conf
+	SaveConfig(withTrigger)
 }

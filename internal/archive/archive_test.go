@@ -9,29 +9,26 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var mockConfig = &config.ConfigType{
-	Directories: []config.DirectoryConfigType{
-		{
-			Bucket:  "test-bucket",
-			Path:    "test/path/dir1",
-			Dirname: "dir1",
-		},
-		{
-			Bucket:  "test-bucket",
-			Path:    "test/path/dir2",
-			Dirname: "dir2",
-		},
+var testDirs = map[string]config.DirectoryConfigType{
+	"test-1": {
+		Bucket:  "test-bucket",
+		Path:    "test/path/dir1",
+		Dirname: "dir1",
+	},
+	"test-2": {
+		Bucket:  "test-bucket",
+		Path:    "test/path/dir2",
+		Dirname: "dir2",
 	},
 }
 
 func TestArchive(t *testing.T) {
-	config.Config = mockConfig
 
-	files := make(chan config.S3Item, len(mockConfig.Directories))
+	files := make(chan config.S3Item, len(testDirs))
 
 	var wg sync.WaitGroup
 
-	Archive(&wg, files)
+	Archive(&wg, testDirs, files)
 	wg.Wait()
 	close(files)
 

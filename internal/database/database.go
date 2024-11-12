@@ -43,52 +43,49 @@ func NewCommand(name string, arg ...string) CmdInterface {
 
 var execCommand CmdInterface
 
-func Dump(wg *sync.WaitGroup, files chan config.S3Item) {
-	conf := config.Config
-	fmt.Printf("Запуск создания дампов для %d БД", len(conf.DataBases))
-	for _, db := range conf.DataBases {
-		if db.Active {
-			wg.Add(1)
-			go func(db config.DataBaseConfigType) {
-				defer wg.Done()
-				var filepath string
+func Dump(wg *sync.WaitGroup, databases map[string]config.DataBaseConfigType, files chan config.S3Item) {
+	fmt.Printf("Запуск создания дампов для %d БД", len(databases))
+	for _, db := range databases {
+		wg.Add(1)
+		go func(db config.DataBaseConfigType) {
+			defer wg.Done()
+			var filepath string
 
-				switch db.TypeDB {
-				case "postgre":
-					filepath = dumpPostgreSQLDocker(
+			switch db.TypeDB {
+			case "postgre":
+				filepath = dumpPostgreSQLDocker(
+					db.ContainerName,
+					db.DataBaseName,
+					db.User,
+					db.Password,
+				)
+			case "mysql":
+				if db.IsDocker {
+					filepath = dumpMysqlDocker(
 						db.ContainerName,
 						db.DataBaseName,
 						db.User,
 						db.Password,
 					)
-				case "mysql":
-					if db.IsDocker {
-						filepath = dumpMysqlDocker(
-							db.ContainerName,
-							db.DataBaseName,
-							db.User,
-							db.Password,
-						)
-					} else {
-						filepath = dumpMysqlHost(
-							db.DataBaseName,
-							db.User,
-							db.Password,
-						)
-					}
-				default:
-					return
+				} else {
+					filepath = dumpMysqlHost(
+						db.DataBaseName,
+						db.User,
+						db.Password,
+					)
 				}
+			default:
+				return
+			}
 
-				files <- config.S3Item{
-					ObjectName: db.DataBaseName + ".sql",
-					Bucket:     db.Bucket,
-					FilePath:   filepath,
-					ItemType:   "Дамп БД",
-					Size:       config.GetFileSize(filepath),
-				}
-			}(db)
-		}
+			files <- config.S3Item{
+				ObjectName: db.DataBaseName + ".sql",
+				Bucket:     db.Bucket,
+				FilePath:   filepath,
+				ItemType:   "Дамп БД",
+				Size:       config.GetFileSize(filepath),
+			}
+		}(db)
 	}
 }
 
