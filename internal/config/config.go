@@ -167,17 +167,21 @@ func getIndex() string {
 	return hex.EncodeToString(hashBytes)
 }
 
-func UpdateConfig(conf ConfigType) {
+func UpdateConfig(conf ConfigType, withDay bool) {
 	LoadConfig()
 	withTrigger := false
 	if conf.StartTime.Minute() != Config.StartTime.Minute() ||
 		conf.StartTime.Hour() != Config.StartTime.Hour() {
 		withTrigger = true
 		for i, schedule := range conf.Schedules {
+			day := schedule.StartTime.Day()
+			if withDay {
+				day = conf.StartTime.Day()
+			}
 			conf.Schedules[i].StartTime = time.Date(
 				schedule.StartTime.Year(),
 				schedule.StartTime.Month(),
-				schedule.StartTime.Day(),
+				day,
 				conf.StartTime.Hour(),
 				conf.StartTime.Minute(),
 				conf.StartTime.Second(),

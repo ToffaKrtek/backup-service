@@ -46,6 +46,7 @@ func scheduleJob() {
 			jobRunning = false
 			return
 		default:
+			config.LoadConfig()
 			now := time.Now()
 			startTime := config.Config.GetStartTime()
 
@@ -56,8 +57,9 @@ func scheduleJob() {
 			var wg sync.WaitGroup
 			files := make(chan config.S3Item)
 			for i, schedule := range config.Config.Schedules {
-				if config.Config.StartTime == schedule.StartTime {
-					fmt.Println("Запуск джоб для расписания", schedule.ScheduleName)
+				fmt.Println("Джоба", schedule.ScheduleName)
+				if schedule.StartTime.Before(config.Config.StartTime) {
+					fmt.Println("Запуск джобы", schedule.ScheduleName)
 					if len(schedule.Directories) > 0 {
 						wg.Add(1)
 						go func() {

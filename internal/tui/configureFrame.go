@@ -68,7 +68,7 @@ func ConfigureFrame() *tview.Frame {
 		// }).
 		AddButton("Сохранить", func() {
 			// Логика сохранения конфигурации
-			config.UpdateConfig(*config.Config)
+			config.UpdateConfig(*config.Config, false)
 			SetRightItem(0)
 		})
 	return tview.NewFrame(mainForm)
