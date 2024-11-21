@@ -8,6 +8,8 @@ type DirectoryConfigType struct {
 	Bucket     string `json:"s3_bucket"`
 	ObjectName string `json:"object_name"`
 	Index      string `json:"index"`
+	IsFull     bool   `json:"is_full"`
+	Days       int    `json:"days"`
 }
 
 func (d DirectoryConfigType) String() string {
