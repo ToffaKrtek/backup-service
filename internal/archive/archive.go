@@ -20,7 +20,13 @@ func Archive(wg *sync.WaitGroup, dirs map[string]config.DirectoryConfigType, fil
 			defer wg.Done()
 			defer fmt.Println("Закончена архивация")
 			archivePath := config.GetFileName(dir.Dirname + "_%s.zip")
-			if err := zipDirectory(dir.Path, archivePath); err == nil {
+			var err error
+			if dir.IsFull {
+				err = zipDirectory(dir.Path, archivePath)
+			} else {
+				err = zipRecentFiles(dir.Path, archivePath, max(dir.Days, 1))
+			}
+			if err == nil {
 				item := config.S3Item{
 					Bucket:     dir.Bucket,
 					FilePath:   archivePath,

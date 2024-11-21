@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"strconv"
+
 	"github.com/ToffaKrtek/backup-service/internal/config"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -32,11 +34,35 @@ func DirFrame() *tview.Frame {
 					AddInputField("Бакет (S3)", dir.Bucket, 20, nil, func(str string) {
 						dir.Bucket = str
 					}).
-					AddButton("Сохранить", func() {
-						editDir = false
-						config.UpdateDirectory(dir)
-						SetRightItem(3)
-					}).
+					AddCheckbox("Полная архивация", dir.IsFull, func(checked bool) {
+						dir.IsFull = checked
+					})
+				if !dir.IsFull {
+					editDirForm.AddInputField(
+						"Максимальный срок создания|обновления",
+						strconv.Itoa(dir.Days),
+						20,
+						func(txt string, l rune) bool {
+							num, err := strconv.ParseInt(txt, 10, 0)
+							if err != nil {
+								return false
+							}
+							return num < 30
+						},
+						func(text string) {
+							num, err := strconv.ParseInt(text, 10, 0)
+							if err == nil {
+								dir.Days = int(num)
+							}
+						},
+					)
+				}
+
+				editDirForm.AddButton("Сохранить", func() {
+					editDir = false
+					config.UpdateDirectory(dir)
+					SetRightItem(3)
+				}).
 					AddButton("Удалить", func() {
 						editDir = false
 						config.DeleteDirectory(dir)
