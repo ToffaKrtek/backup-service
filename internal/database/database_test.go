@@ -26,26 +26,24 @@ func (m *MockCommand) Stdout() *os.File {
 func (m *MockCommand) SetStdout(stdout io.Writer) {}
 func (m *MockCommand) SetEnv(env []string)        {}
 
-var mockConfig = &config.ConfigType{
-	DataBases: []config.DataBaseConfigType{
-		{
-			TypeDB:        "mysql",
-			IsDocker:      true,
-			ContainerName: "mysql_container",
-			DataBaseName:  "test_db",
-			User:          "user",
-			Password:      "password",
-			Bucket:        "bucket_name",
-		},
-		{
-			TypeDB:        "postgre",
-			IsDocker:      true,
-			ContainerName: "postgre_container",
-			DataBaseName:  "test_db",
-			User:          "user",
-			Password:      "password",
-			Bucket:        "bucket_name",
-		},
+var testDatabases = map[string]config.DataBaseConfigType{
+	"test-1": {
+		TypeDB:        "mysql",
+		IsDocker:      true,
+		ContainerName: "mysql_container",
+		DataBaseName:  "test_db",
+		User:          "user",
+		Password:      "password",
+		Bucket:        "bucket_name",
+	},
+	"test-2": {
+		TypeDB:        "postgre",
+		IsDocker:      true,
+		ContainerName: "postgre_container",
+		DataBaseName:  "test_db",
+		User:          "user",
+		Password:      "password",
+		Bucket:        "bucket_name",
 	},
 }
 
@@ -57,8 +55,7 @@ func TestDump(t *testing.T) {
 	files := make(chan config.S3Item, 2)
 	var wg sync.WaitGroup
 
-	config.Config = mockConfig
-	Dump(&wg, files)
+	Dump(&wg, testDatabases, files)
 	wg.Wait()
 	close(files)
 	var items []config.S3Item
