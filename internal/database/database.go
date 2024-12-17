@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 
 	"github.com/ToffaKrtek/backup-service/internal/config"
@@ -74,6 +75,21 @@ func Dump(wg *sync.WaitGroup, databases map[string]config.DataBaseConfigType, fi
 						db.Password,
 					)
 				}
+			case "mysql-swarm":
+				if db.IsDocker {
+					filepath = dumpMysqlDockerSwarm(
+						db.ContainerName,
+						db.DataBaseName,
+						db.User,
+						db.Password,
+					)
+				} else {
+					filepath = dumpMysqlHost(
+						db.DataBaseName,
+						db.User,
+						db.Password,
+					)
+				}
 			default:
 				return
 			}
@@ -87,6 +103,25 @@ func Dump(wg *sync.WaitGroup, databases map[string]config.DataBaseConfigType, fi
 			}
 		}(db)
 	}
+}
+
+func dumpMysqlDockerSwarm(
+	containerName string,
+	dbName string,
+	user string,
+	pass string,
+) string {
+	containerID := getContainerID(containerName)
+	return dumpMysqlDocker(containerID, dbName, user, pass)
+}
+
+func getContainerID(serviceName string) string {
+	cmd := exec.Command("docker", "service", "ps", serviceName, "--format", "{{.ID }}")
+	output, err := cmd.Output()
+	if err != nil {
+		return serviceName
+	}
+	return strings.TrimSpace(string(output))
 }
 
 func dumpMysqlDocker(
@@ -118,8 +153,8 @@ func dumpMysqlDocker(
 	}
 
 	return filename
-
 }
+
 func dumpMysqlHost(dbName string, user string, pass string) string {
 	cmd := NewCommand(
 		"mysqldump",

@@ -2,12 +2,15 @@ package config
 
 import "fmt"
 
-var DbTypes = []string{"Не выбрано", "mysql", "postgre"}
-var DbTypesMap = map[string]int{
-	"Mysql":      1,
-	"PostgreSql": 2,
-	"":           0,
-}
+var (
+	DbTypes    = []string{"Не выбрано", "mysql", "postgre", "mysql-swarm"}
+	DbTypesMap = map[string]int{
+		"Mysql":       1,
+		"PostgreSql":  2,
+		"Mysql-Swarm": 3,
+		"":            0,
+	}
+)
 
 type DataBaseConfigType struct {
 	User          string `json:"user"`
